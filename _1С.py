@@ -1,7 +1,6 @@
 import tkinter as tk
 import sqlite3
-import datetime
-import time
+from PIL import Image, ImageTk
 
 # create a table in a datebase
 conn = sqlite3.connect('tags.db')
@@ -15,7 +14,7 @@ conn.close()
 # create a window
 root = tk.Tk()
 root.title("Tracker")
-root.geometry("800x600")
+root.geometry("800x800")
 
 # add a character
 def add_character():
@@ -28,7 +27,7 @@ def add_character():
                        FROM tags
                        WHERE name = ?;
                    ''', (name,))
-    if cursor.fetchone()[0] == 1:
+    if cursor.fetchone()[0] > 0:
         message = f"Character already exist\n"
         message_output.config(state=tk.NORMAL)
         message_output.insert(tk.END, message)
@@ -130,9 +129,51 @@ def add_geotag():
     conn.close()
 
 def show_character_positions():
+    conn = sqlite3.connect('tags.db')
+    cursor = conn.cursor()
+    cursor.execute(''' SELECT COUNT(DISTINCT name) 
+                       FROM tags;
+                   ''')
+    name_num = cursor.fetchone()[0]
+    cursor.execute(''' SELECT name, COUNT(DISTINCT geodate) 
+                       FROM tags
+                       GROUP BY name;
+                   ''')
+    tags = cursor.fetchall()
+    if tags is None:
+        message = f"No data\n"
+        message_output.config(state=tk.NORMAL)
+        message_output.insert(tk.END, message)
+        message_output.config(state=tk.DISABLED)
+        return
+    name_geo = {}
+    for i in range(name_num):
+        cursor.execute(''' SELECT geodate 
+                           FROM tags
+                           WHERE name = ?;
+                       ''', (tags[i][0],))
+        name_geo[tags[i][0]] = cursor.fetchall()
+
+    name_dot = {}
+    for name in name_geo.keys():
+        latest_geo = [-1999999999, None, None]
+        for geodate in name_geo[name]:
+            geo = geodate
+            if geo[0] > latest_geo[0]:
+                latest_geo = geo
+        color = (255, 0, 0)
+        size = 10
+        x = latest_geo[1]
+        y = latest_geo[2]
+        draw.rectangle([x - size / 2, y - size / 2, x + size / 2, y + size / 2], fill=color)
+    image.save("map.jpg")
+    image.show()
+        
+
+    
 
 
-    return
+    conn.close()
 
 def show_character_trajectories():
     return
@@ -166,9 +207,22 @@ show_trajectories_button = tk.Button(root, text="Show Trajectories", command=sho
 show_trajectories_button.grid(row=2, column=1, padx=10, pady=10)
 
 # Поле для вывода сообщений
-message_output = tk.Text(root, height=5, width=40)
+message_output = tk.Text(root, height=5, width=35)
 message_output.grid(row=0, column=3, rowspan=3, padx=10, pady=10)
 message_output.config(state=tk.DISABLED)
 
-# Запуск основного цикла
+image_path = "map.jpg"
+image = Image.open(image_path)
+
+image_width = 700
+image_height = 600
+blank_image = Image.new("RGB", (image_width, image_height), "white")
+
+blank_image.paste(image, (0, 0))
+
+photo = ImageTk.PhotoImage(blank_image)
+
+image_label = tk.Label(root, image=photo)
+image_label.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
+
 root.mainloop()
