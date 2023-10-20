@@ -97,7 +97,8 @@ def add_geotag():
                        FROM tags
                        WHERE name = ? AND geodate = NULL;
                    ''', (request[0],))
-    if cursor.fetchone()[0] == 1 :
+    a = cursor.fetchone()
+    if a[0] > 0 :
         cursor.execute(''' SELECT tag_id
                            FROM tags
                            WHERE name = ? AND geodate = NULL;
